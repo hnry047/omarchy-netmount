@@ -60,6 +60,7 @@ class ParseFormTests(unittest.TestCase):
     def test_each_invalid_value_points_at_its_field(self):
         for changes, field in (
             ({"label": "  "}, "label"),
+            ({"label": "Docs\tshare"}, "label"),
             ({"server": "bad host!"}, "server"),
             ({"remote": "a,b"}, "remote"),
             ({"local": "/etc/x"}, "local"),

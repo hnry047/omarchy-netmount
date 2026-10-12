@@ -3,6 +3,7 @@
 from nas_core import (
     FieldError,
     OperationError,
+    clean_label,
     load_profiles,
     mount_state,
     normalize,
@@ -57,13 +58,11 @@ class Manager:
         clean = dict(
             normalize(profile["server"], profile["remote"], profile["local"]),
             id=profile["id"],
-            label=profile["label"].strip(),
+            label=clean_label(profile["label"]),
             remember_login=remember_login,
             encrypt=profile.get("encrypt") is not False,
             allow_exec=profile.get("allow_exec") is True,
         )
-        if not clean["label"]:
-            raise ValueError("Enter a connection name.")
         same = next(
             (
                 p

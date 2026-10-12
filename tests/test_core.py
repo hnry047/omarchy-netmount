@@ -325,6 +325,70 @@ class CoreTests(unittest.TestCase):
             self.core._unescape(r"/mnt/nas\040backups"), "/mnt/nas backups"
         )
 
+    def test_profiles_that_could_not_be_loaded_are_never_saved(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "profiles.json"
+            for label in ("Docs\tshare", "Docs\nshare", "   "):
+                with (
+                    self.subTest(label=repr(label)),
+                    self.assertRaises(self.core.FieldError) as caught,
+                ):
+                    self.core.save_profiles(path, [dict(self.profile(), label=label)])
+                self.assertEqual(caught.exception.field, "label")
+            self.assertFalse(path.exists())
+
+    def mkdir_calls(self, local, home):
+        """Mount into a missing folder with a fake runner; return elevated calls."""
+        calls = []
+
+        def runner(args, **kwargs):
+            calls.append(args)
+            return subprocess.CompletedProcess(args, 0, "", "")
+
+        with (
+            tempfile.TemporaryDirectory() as runtime,
+            patch.dict(os.environ, {"XDG_RUNTIME_DIR": runtime}),
+            patch("nas_core.Path.home", return_value=home),
+        ):
+            profile = dict(
+                self.core.normalize("fileserver", "docs", str(local)),
+                id="demo",
+                label="Demo",
+            )
+            with self.assertRaises(self.core.OperationError):
+                # The fake runner never mounts, so confirmation fails last.
+                self.core.mount(
+                    profile,
+                    {"username": "demo", "password": "<PASSWORD>"},
+                    runner=runner,
+                    mounts_fn=lambda: [],
+                )
+        return [c for c in calls if "/usr/bin/mkdir" in c]
+
+    def test_missing_home_folder_is_created_without_elevation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(os.path.realpath(tmp))
+            local = home / "nas" / "docs"
+            self.assertEqual(self.mkdir_calls(local, home), [])
+            self.assertTrue(local.is_dir())
+            self.assertEqual(local.stat().st_uid, os.getuid())
+
+    def test_missing_system_folder_is_created_through_pkexec(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            calls = self.mkdir_calls("/mnt/nas-test-missing", Path(tmp))
+        self.assertEqual(
+            calls,
+            [
+                [
+                    "/usr/bin/pkexec",
+                    "/usr/bin/mkdir",
+                    "-p",
+                    "--",
+                    "/mnt/nas-test-missing",
+                ]
+            ],
+        )
+
     def test_mount_refuses_occupied_target(self):
         p = self.profile()
         calls = []

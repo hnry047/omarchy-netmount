@@ -80,6 +80,20 @@ def normalize(server, remote, local):
     }
 
 
+def clean_label(label):
+    """A connection name that load_profiles will accept again."""
+    try:
+        label = _clean(label)
+    except ValueError:
+        raise FieldError(
+            "Connection names cannot contain tabs, line breaks or control characters.",
+            "label",
+        ) from None
+    if not label:
+        raise FieldError("Enter a connection name.", "label")
+    return label
+
+
 def _unescape(value):
     return re.sub(r"\\([0-7]{3})", lambda m: chr(int(m[1], 8)), value)
 
@@ -160,7 +174,10 @@ def save_profiles(path, profiles):
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     public = []
     for p in profiles:
+        # Refuse anything load_profiles would reject, so a bad value can never
+        # leave the saved file unreadable.
         normalize(p["server"], p["remote"], p["local"])
+        clean_label(p["label"])
         record = {k: p[k] for k in ("id", "label", "server", "remote", "local")}
         record["remember_login"] = p.get("remember_login") is True
         record["encrypt"] = p.get("encrypt") is not False
@@ -232,6 +249,21 @@ def validate_login(login):
     return clean
 
 
+def _make_folder(local, runner):
+    # Folders in the user's home are created as the user: root-owned ones would
+    # stay unwritable after unmounting. Only /mnt and /media need elevation.
+    if local.startswith(str(Path.home()) + "/"):
+        try:
+            os.makedirs(local, exist_ok=True)
+        except OSError:
+            raise OperationError(
+                "The mount folder could not be created. Check that you own its parent folder.",
+                "local",
+            ) from None
+    else:
+        _run(["/usr/bin/pkexec", "/usr/bin/mkdir", "-p", "--", local], runner)
+
+
 def mount(profile, login, runner=subprocess.run, mounts_fn=read_mounts):
     p = normalize(profile["server"], profile["remote"], profile["local"])
     login = validate_login(login)
@@ -272,10 +304,7 @@ def mount(profile, login, runner=subprocess.run, mounts_fn=read_mounts):
                     if key != "domain" or login[key]:
                         stream.write(key + "=" + login[key] + "\n")
             if not os.path.isdir(p["local"]):
-                _run(
-                    ["/usr/bin/pkexec", "/usr/bin/mkdir", "-p", "--", p["local"]],
-                    runner,
-                )
+                _make_folder(p["local"], runner)
             if mount_state(p, mounts_fn()) != "unmounted":
                 raise OperationError(
                     "The local folder became occupied. No mount was performed."

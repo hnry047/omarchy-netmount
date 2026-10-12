@@ -38,7 +38,7 @@ Click **Save and mount**. Use the ⋮ menu to Mount, Disconnect, Edit or Forget.
 - Mounted shares are private to you (`file_mode=0600`, `dir_mode=0700`): other local users can't read them.
 - Passwords never appear in command arguments, config files or logs.
 - Only `mkdir`, `mount` and `umount` are elevated, through polkit. No sudo rules or fstab entries.
-- It never unmounts a share it didn't mount.
+- It only unmounts a connection's own share from that connection's folder, never anything else mounted there.
 
 ## Uninstall
 

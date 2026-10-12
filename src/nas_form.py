@@ -1,6 +1,6 @@
 """Connection form text, layout data and validation; no GUI or keyring access."""
 
-from nas_core import FieldError, normalize, validate_login
+from nas_core import clean_label, normalize, validate_login
 
 FIELDS = (
     ("label", "Connection name"),
@@ -61,12 +61,10 @@ def parse_form(values, profile_id, encrypt, allow_exec):
     clean = dict(
         normalize(values["server"], values["remote"], values["local"]),
         id=profile_id,
-        label=values["label"].strip(),
+        label=clean_label(values["label"]),
         encrypt=encrypt,
         allow_exec=allow_exec,
     )
-    if not clean["label"]:
-        raise FieldError("Enter a connection name.", "label")
     entered = {key: values[key] for key in LOGIN_KEYS}
     validate_login(entered)
     return clean, entered
