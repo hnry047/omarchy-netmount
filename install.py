@@ -13,12 +13,19 @@ def backup_shell_config(config):
     backup = config.with_name(
         "shell.json.netmount-backup-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     )
-    # shutil.copy2 writes the copy with umask permissions before narrowing them,
-    # so another account could open it meanwhile. Create it owner-only instead.
-    fd = os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with open(config, "rb") as src, os.fdopen(fd, "wb") as dst:
-        shutil.copyfileobj(src, dst)
-    shutil.copystat(config, backup)
+    with open(config, "rb") as src:
+        # The backup stays owner-only whatever the source's mode: it is created
+        # 0600 (shutil.copy2 would start at umask permissions and then copy the
+        # source's), and only the timestamps are copied from the source.
+        fd = os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        try:
+            with os.fdopen(fd, "wb") as dst:
+                shutil.copyfileobj(src, dst)
+            st = os.fstat(src.fileno())
+            os.utime(backup, ns=(st.st_atime_ns, st.st_mtime_ns))
+        except BaseException:
+            backup.unlink(missing_ok=True)
+            raise
     return backup
 
 
