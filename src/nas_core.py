@@ -276,8 +276,12 @@ def mount(profile, login, runner=subprocess.run, mounts_fn=read_mounts):
             encrypt = profile.get("encrypt") is not False
             if encrypt:
                 options += ",vers=3,seal"
+            # Owner-only modes: without them CIFS defaults to 0755, letting other
+            # local users read the share through this user's NAS login.
             if profile.get("allow_exec") is not True:
-                options += ",noexec"
+                options += ",noexec,file_mode=0600,dir_mode=0700"
+            else:
+                options += ",file_mode=0700,dir_mode=0700"
             _run(
                 [
                     "/usr/bin/pkexec",

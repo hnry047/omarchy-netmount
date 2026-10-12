@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "hnry047.netmount",
   "name": "Netmount",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "hnry047",
   "license": "MIT",
   "description": "Mount SMB/CIFS network shares from the bar, with saved paths and secure remembered logins.",

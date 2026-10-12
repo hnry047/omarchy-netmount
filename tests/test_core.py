@@ -226,6 +226,15 @@ class CoreTests(unittest.TestCase):
         self.assertNotIn("vers=3", options)
         self.assertNotIn("noexec", options)
         self.assertIn("nosuid", options)
+        self.assertIn("file_mode=0700", options)
+
+    def test_mounted_share_is_private_to_the_user(self):
+        # Other local users must not read the share through this user's login.
+        options = self.mount_options(self.profile())
+        self.assertIn("file_mode=0600", options)
+        self.assertIn("dir_mode=0700", options)
+        # The client must enforce those modes, so permission checks stay on.
+        self.assertNotIn("noperm", options)
 
     def test_unsupported_encryption_explains_the_setting(self):
         with self.assertRaises(self.core.OperationError) as caught:

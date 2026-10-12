@@ -35,6 +35,7 @@ Click **Save and mount**. Use the ⋮ menu to Mount, Disconnect, Edit or Forget.
 ## Security
 
 - SMB 3 encryption and `noexec` are on by default (per-connection opt-outs under **Security**).
+- Mounted shares are private to you (`file_mode=0600`, `dir_mode=0700`): other local users can't read them.
 - Passwords never appear in command arguments, config files or logs.
 - Only `mkdir`, `mount` and `umount` are elevated, through polkit. No sudo rules or fstab entries.
 - It never unmounts a share it didn't mount.
