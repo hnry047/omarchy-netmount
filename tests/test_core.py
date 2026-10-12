@@ -19,6 +19,10 @@ class CoreTests(unittest.TestCase):
         import nas_core
 
         self.core = nas_core
+        # CI and dev machines may lack cifs-utils; point at a file that exists.
+        helper = patch.object(nas_core, "MOUNT_HELPER", sys.executable)
+        helper.start()
+        self.addCleanup(helper.stop)
 
     def profile(self):
         return dict(
@@ -295,6 +299,21 @@ class CoreTests(unittest.TestCase):
             ):
                 self.mount_options(self.profile(), stderr=stderr)
             self.assertEqual(caught.exception.field, field)
+
+    def test_missing_cifs_utils_is_explained_before_any_prompt(self):
+        calls = []
+        with (
+            patch.object(self.core, "MOUNT_HELPER", "/nonexistent/mount.cifs"),
+            self.assertRaises(self.core.OperationError) as caught,
+        ):
+            self.core.mount(
+                self.profile(),
+                {"username": "demo", "password": "<PASSWORD>", "domain": ""},
+                runner=lambda args, **kwargs: calls.append(args),
+                mounts_fn=lambda: [],
+            )
+        self.assertIn("sudo pacman -S cifs-utils", str(caught.exception))
+        self.assertEqual(calls, [])
 
     def test_read_mounts_parses_local_mount_metadata(self):
         mounts = self.core.read_mounts()

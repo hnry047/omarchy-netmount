@@ -7,6 +7,9 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+# Installed by cifs-utils; mount(8) calls it for `-t cifs`.
+MOUNT_HELPER = "/usr/bin/mount.cifs"
+
 
 class OperationError(Exception):
     """A message safe to show in the UI, optionally tied to the form field to fix."""
@@ -240,6 +243,12 @@ def mount(profile, login, runner=subprocess.run, mounts_fn=read_mounts):
         raise OperationError(
             "Something else is mounted in this folder. Choose another folder.",
             "local",
+        )
+    # Without the helper the kernel only reports a vague error, so say what to
+    # install before the polkit prompt.
+    if not os.path.exists(MOUNT_HELPER):
+        raise OperationError(
+            "Install cifs-utils to mount network shares: sudo pacman -S cifs-utils"
         )
     # Only an explicit mount action inspects the local filesystem. Status and
     # unmount stay metadata-only, even when a NAS is offline.
