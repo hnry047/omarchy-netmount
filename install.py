@@ -1,10 +1,25 @@
 #!/usr/bin/python3
 """Install the user plugin without modifying packaged files."""
 
+import os
 import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
+
+
+def backup_shell_config(config):
+    """Copy the shell configuration next to itself and return the copy's path."""
+    backup = config.with_name(
+        "shell.json.netmount-backup-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+    )
+    # shutil.copy2 writes the copy with umask permissions before narrowing them,
+    # so another account could open it meanwhile. Create it owner-only instead.
+    fd = os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with open(config, "rb") as src, os.fdopen(fd, "wb") as dst:
+        shutil.copyfileobj(src, dst)
+    shutil.copystat(config, backup)
+    return backup
 
 
 def main():
@@ -19,10 +34,7 @@ def main():
             )
     config = Path.home() / ".config" / "omarchy" / "shell.json"
     if config.exists():
-        backup = config.with_name(
-            "shell.json.netmount-backup-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f")
-        )
-        shutil.copy2(config, backup)
+        backup = backup_shell_config(config)
         print("Shell configuration backed up to " + str(backup))
     target.parent.mkdir(parents=True, exist_ok=True)
     if not target.is_symlink():

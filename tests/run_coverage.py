@@ -23,6 +23,7 @@ SAFE = [
     "test_single",
     "test_window",
     "test_status",
+    "test_install",
 ]
 # Nothing is excluded; nas_app.main() itself runs only in the live tests.
 EXCLUDED = set()
