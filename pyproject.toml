@@ -1,0 +1,13 @@
+# Type-checker settings only; the plugin has no build step or dependencies.
+# The widget runs the system Python (PyGObject lives there, not in mise's).
+
+[tool.pyright]
+include = ["src", "tests"]
+extraPaths = ["src"]
+pythonVersion = "3.14"
+venvPath = "/usr"
+
+[tool.ty.environment]
+python = "/usr/bin/python3"
+extra-paths = ["src"]
+python-version = "3.14"

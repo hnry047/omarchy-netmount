@@ -1,0 +1,38 @@
+# Lint and run the safe test suite on every push and pull request.
+# Arch matches Omarchy's system Python and PyGObject; Xvfb gives the GTK
+# widget tests a display. The live desktop tests skip themselves here.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install packages
+        run: |
+          pacman -Syu --noconfirm --needed \
+            python python-gobject gtk3 libsecret ruff xorg-server-xvfb
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Lint
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Validate manifest
+        run: |
+          python -c 'import json; m = json.load(open("manifest.json")); assert m["id"] == "hnry047.netmount"; assert m["entryPoints"]["barWidget"]'
+
+      - name: Tests
+        working-directory: tests
+        run: xvfb-run -a /usr/bin/python3 run_coverage.py --min 89

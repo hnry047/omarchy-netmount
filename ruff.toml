@@ -1,0 +1,13 @@
+# `ruff format` is the formatter (also run by the editor on save).
+# Target 3.12 so formatting keeps portable syntax such as `except (A, B):`.
+target-version = "py312"
+line-length = 88
+src = ["src", "tests"]
+
+[lint]
+select = ["E", "F", "W", "B", "UP", "I", "C90"]
+ignore = ["E501"]
+
+[lint.mccabe]
+# Matches the editor's complexity warning.
+max-complexity = 15

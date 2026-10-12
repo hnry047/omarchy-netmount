@@ -1,0 +1,9 @@
+__pycache__/
+.ruff_cache/
+.ropeproject/
+.remember/
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+docs/
+.venv/
